@@ -123,6 +123,7 @@ class Disciple_Tools_Webform {
          */
         if ( is_admin() ) {
             require_once( 'admin/class-form-manager.php' ); // Form manager for admin operations
+            require_once( 'admin/class-form-builder.php' ); // Form builder interface
             require_once( 'admin/admin-menu-and-tabs.php' ); // Admin interface
         }
 

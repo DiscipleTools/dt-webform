@@ -152,6 +152,15 @@ class Disciple_Tools_Webform_Tab_Forms {
 
     private function handle_create_form() {
         $form_data = dt_recursive_sanitize_array( $_POST );
+        
+        // Process fields data from form builder
+        if ( isset( $form_data['fields'] ) && is_string( $form_data['fields'] ) ) {
+            $decoded_fields = json_decode( stripslashes( $form_data['fields'] ), true );
+            if ( $decoded_fields ) {
+                $form_data['fields'] = $decoded_fields;
+            }
+        }
+        
         $manager = DT_Webform_Form_Manager::instance();
         
         $result = $manager->create_form_from_admin( $form_data );
@@ -170,6 +179,15 @@ class Disciple_Tools_Webform_Tab_Forms {
     private function handle_update_form() {
         $form_id = isset( $_POST['form_id'] ) ? absint( $_POST['form_id'] ) : 0;
         $form_data = dt_recursive_sanitize_array( $_POST );
+        
+        // Process fields data from form builder
+        if ( isset( $form_data['fields'] ) && is_string( $form_data['fields'] ) ) {
+            $decoded_fields = json_decode( stripslashes( $form_data['fields'] ), true );
+            if ( $decoded_fields ) {
+                $form_data['fields'] = $decoded_fields;
+            }
+        }
+        
         $manager = DT_Webform_Form_Manager::instance();
         
         $result = $manager->update_form_from_admin( $form_id, $form_data );
@@ -258,59 +276,8 @@ class Disciple_Tools_Webform_Tab_Forms {
     }
 
     private function new_form_page() {
-        $post_types = DT_Webform_Core::get_available_post_types();
-        ?>
-        <div class="wrap">
-            <h1><?php esc_html_e( 'Create New Form', 'dt-webform' ); ?></h1>
-            
-            <form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=disciple_tools_webform&tab=forms' ) ); ?>">
-                <?php wp_nonce_field( 'dt_webform_action', 'dt_webform_nonce' ); ?>
-                <input type="hidden" name="action" value="create_form">
-                
-                <table class="form-table">
-                    <tr>
-                        <th scope="row">
-                            <label for="title"><?php esc_html_e( 'Form Title', 'dt-webform' ); ?></label>
-                        </th>
-                        <td>
-                            <input type="text" id="title" name="title" class="regular-text" required>
-                            <p class="description"><?php esc_html_e( 'Enter a descriptive title for your form.', 'dt-webform' ); ?></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="post_type"><?php esc_html_e( 'Target Post Type', 'dt-webform' ); ?></label>
-                        </th>
-                        <td>
-                            <select id="post_type" name="post_type" required>
-                                <option value=""><?php esc_html_e( 'Select a post type...', 'dt-webform' ); ?></option>
-                                <?php foreach ( $post_types as $type => $config ) : ?>
-                                    <option value="<?php echo esc_attr( $type ); ?>"><?php echo esc_html( $config['label'] ); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <p class="description"><?php esc_html_e( 'Select the type of record this form will create.', 'dt-webform' ); ?></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="is_active"><?php esc_html_e( 'Active', 'dt-webform' ); ?></label>
-                        </th>
-                        <td>
-                            <input type="checkbox" id="is_active" name="is_active" value="1">
-                            <label for="is_active"><?php esc_html_e( 'Make this form active immediately', 'dt-webform' ); ?></label>
-                        </td>
-                    </tr>
-                </table>
-                
-                <p class="submit">
-                    <input type="submit" class="button-primary" value="<?php esc_attr_e( 'Create Form', 'dt-webform' ); ?>">
-                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=disciple_tools_webform&tab=forms' ) ); ?>" class="button">
-                        <?php esc_html_e( 'Cancel', 'dt-webform' ); ?>
-                    </a>
-                </p>
-            </form>
-        </div>
-        <?php
+        $form_builder = DT_Webform_Form_Builder::instance();
+        $form_builder->render_form_builder();
     }
 
     private function edit_form_page( $form_id ) {
@@ -321,90 +288,8 @@ class Disciple_Tools_Webform_Tab_Forms {
             return;
         }
 
-        $post_types = DT_Webform_Core::get_available_post_types();
-        ?>
-        <div class="wrap">
-            <h1><?php echo esc_html( sprintf( __( 'Edit Form: %s', 'dt-webform' ), $form['title'] ) ); ?></h1>
-            
-            <form method="post">
-                <?php wp_nonce_field( 'dt_webform_action', 'dt_webform_nonce' ); ?>
-                <input type="hidden" name="action" value="update_form">
-                <input type="hidden" name="form_id" value="<?php echo esc_attr( $form['id'] ); ?>">
-                
-                <table class="form-table">
-                    <tr>
-                        <th scope="row">
-                            <label for="title"><?php esc_html_e( 'Form Title', 'dt-webform' ); ?></label>
-                        </th>
-                        <td>
-                            <input type="text" id="title" name="title" class="regular-text" value="<?php echo esc_attr( $form['title'] ); ?>" required>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="post_type"><?php esc_html_e( 'Target Post Type', 'dt-webform' ); ?></label>
-                        </th>
-                        <td>
-                            <select id="post_type" name="post_type" required>
-                                <?php foreach ( $post_types as $type => $config ) : ?>
-                                    <option value="<?php echo esc_attr( $type ); ?>" <?php selected( $form['post_type'], $type ); ?>>
-                                        <?php echo esc_html( $config['label'] ); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="is_active"><?php esc_html_e( 'Active', 'dt-webform' ); ?></label>
-                        </th>
-                        <td>
-                            <input type="checkbox" id="is_active" name="is_active" value="1" <?php checked( $form['is_active'] ); ?>>
-                            <label for="is_active"><?php esc_html_e( 'Form is active and accepting submissions', 'dt-webform' ); ?></label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="form_url"><?php esc_html_e( 'Form URL', 'dt-webform' ); ?></label>
-                        </th>
-                        <td>
-                            <input type="url" id="form_url" class="regular-text" value="<?php echo esc_url( $form['form_url'] ); ?>" readonly>
-                            <p class="description"><?php esc_html_e( 'Direct link to your form.', 'dt-webform' ); ?></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="embed_code"><?php esc_html_e( 'Embed Code', 'dt-webform' ); ?></label>
-                        </th>
-                        <td>
-                            <textarea id="embed_code" class="large-text code" rows="3" readonly><?php echo esc_textarea( $form['embed_code'] ); ?></textarea>
-                            <p class="description"><?php esc_html_e( 'Copy this code to embed the form on external websites.', 'dt-webform' ); ?></p>
-                        </td>
-                    </tr>
-                </table>
-                
-                <p class="submit">
-                    <input type="submit" class="button-primary" value="<?php esc_attr_e( 'Update Form', 'dt-webform' ); ?>">
-                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=disciple_tools_webform&tab=forms' ) ); ?>" class="button">
-                        <?php esc_html_e( 'Back to Forms', 'dt-webform' ); ?>
-                    </a>
-                </p>
-            </form>
-            
-            <div class="postbox" style="margin-top: 20px;">
-                <h3 class="hndle"><?php esc_html_e( 'Danger Zone', 'dt-webform' ); ?></h3>
-                <div class="inside">
-                    <form method="post" style="margin: 0;" onsubmit="return confirm('<?php esc_attr_e( 'Are you sure you want to delete this form? This action cannot be undone.', 'dt-webform' ); ?>')">
-                        <?php wp_nonce_field( 'dt_webform_action', 'dt_webform_nonce' ); ?>
-                        <input type="hidden" name="action" value="delete_form">
-                        <input type="hidden" name="form_id" value="<?php echo esc_attr( $form['id'] ); ?>">
-                        <p><?php esc_html_e( 'Delete this form permanently. This action cannot be undone.', 'dt-webform' ); ?></p>
-                        <input type="submit" class="button button-link-delete" value="<?php esc_attr_e( 'Delete Form', 'dt-webform' ); ?>">
-                    </form>
-                </div>
-            </div>
-        </div>
-        <?php
+        $form_builder = DT_Webform_Form_Builder::instance();
+        $form_builder->render_form_builder( $form_id, $form );
     }
 
     private function view_form_page( $form_id ) {
