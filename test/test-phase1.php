@@ -25,32 +25,26 @@ function dt_webform_test_phase1() {
         $all_passed = false;
     }
     
-    // Test 2: Check if form manager class exists
-    $results['form_manager_class'] = class_exists( 'DT_Webform_Form_Manager' );
-    if ( ! $results['form_manager_class'] ) {
-        $all_passed = false;
-    }
-    
-    // Test 3: Check if REST controller exists
+    // Test 2: Check if REST controller exists
     $results['rest_controller_class'] = class_exists( 'DT_Webform_Forms_Controller' );
     if ( ! $results['rest_controller_class'] ) {
         $all_passed = false;
     }
     
-    // Test 4: Check if custom post type is registered
+    // Test 3: Check if custom post type is registered
     $results['post_type_registered'] = post_type_exists( 'dt_webform' );
     if ( ! $results['post_type_registered'] ) {
         $all_passed = false;
     }
     
-    // Test 5: Check if capabilities are registered
+    // Test 4: Check if capabilities are registered
     $admin_role = get_role( 'administrator' );
     $results['capabilities_registered'] = $admin_role && $admin_role->has_cap( 'create_dt_webforms' );
     if ( ! $results['capabilities_registered'] ) {
         $all_passed = false;
     }
     
-    // Test 6: Test form creation
+    // Test 5: Test form creation
     if ( $results['core_class'] ) {
         $test_form_id = DT_Webform_Core::create_form( [
             'post_title' => 'Test Form - Phase 1',
@@ -71,7 +65,7 @@ function dt_webform_test_phase1() {
             $all_passed = false;
         }
         
-        // Test 7: Test form retrieval
+        // Test 6: Test form retrieval
         if ( $results['form_creation'] ) {
             $retrieved_form = DT_Webform_Core::get_form( $test_form_id );
             $results['form_retrieval'] = $retrieved_form !== null && $retrieved_form['title'] === 'Test Form - Phase 1';
@@ -91,7 +85,7 @@ function dt_webform_test_phase1() {
         $all_passed = false;
     }
     
-    // Test 8: Check available post types
+    // Test 7: Check available post types
     if ( $results['core_class'] ) {
         $available_types = DT_Webform_Core::get_available_post_types();
         $results['available_post_types'] = ! empty( $available_types ) && isset( $available_types['contacts'] );
@@ -103,7 +97,7 @@ function dt_webform_test_phase1() {
         $all_passed = false;
     }
     
-    // Test 9: Check admin tab classes
+    // Test 8: Check admin tab classes
     $results['admin_forms_tab'] = class_exists( 'Disciple_Tools_Webform_Tab_Forms' );
     $results['admin_settings_tab'] = class_exists( 'Disciple_Tools_Webform_Tab_Settings' );
     if ( ! $results['admin_forms_tab'] || ! $results['admin_settings_tab'] ) {

@@ -95,12 +95,10 @@ class Disciple_Tools_Webform {
     private function __construct() {
         $is_rest = dt_is_rest();
         /**
-         * @todo Decide if you want to use the REST API example
-         * To remove: delete this following line and remove the folder named /rest-api
+         * Load REST API endpoints
          */
-        if ( $is_rest && strpos( dt_get_url_path(), 'dt-webform' ) !== false ) {
-            require_once( 'rest-api/rest-api.php' ); // adds starter rest api class
-        }
+        // Temporarily always load REST API for debugging
+        require_once( 'rest-api/rest-api.php' ); // adds REST API endpoints
 
         /**
 
@@ -117,15 +115,20 @@ class Disciple_Tools_Webform {
          * Load core functionality
          */
         require_once( 'includes/class-dt-webform-core.php' ); // Core webform functionality
+        require_once( 'includes/class-submission-processor.php' ); // Form submission processor
         
         /**
          * Load admin functionality
          */
         if ( is_admin() ) {
-            require_once( 'admin/class-form-manager.php' ); // Form manager for admin operations
             require_once( 'admin/class-form-builder.php' ); // Form builder interface
             require_once( 'admin/admin-menu-and-tabs.php' ); // Admin interface
         }
+
+        /**
+         * Load public functionality
+         */
+        require_once( 'public/class-form-renderer.php' ); // Public form rendering (always load for rewrite rules)
 
         /**
          * @todo Decide if you want to support localization of your plugin
@@ -175,7 +178,16 @@ class Disciple_Tools_Webform {
         $core = DT_Webform_Core::instance();
         $core->register_capabilities();
         
-        // Flush rewrite rules to ensure custom post type URLs work
+        // Load form renderer to register rewrite rules
+        if ( ! class_exists( 'DT_Webform_Form_Renderer' ) ) {
+            require_once( 'public/class-form-renderer.php' );
+        }
+        
+        // Initialize form renderer to add rewrite rules
+        $renderer = DT_Webform_Form_Renderer::instance();
+        $renderer->add_rewrite_rules();
+        
+        // Flush rewrite rules to ensure custom post type URLs and webform URLs work
         flush_rewrite_rules();
         
         // Set plugin version

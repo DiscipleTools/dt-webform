@@ -123,6 +123,7 @@
     font-weight: 500;
     color: #1d2327;
     font-size: 13px;
+    margin-right: 12px;
 }
 
 .dt-webform-field-item .field-type {
@@ -137,9 +138,8 @@
 .dt-webform-field-item .field-description {
     font-size: 11px;
     color: #646970;
-    margin-top: 3px;
-    display: block;
-    width: 100%;
+    margin-left: 8px;
+    flex-shrink: 0;
 }
 
 /* Form Container */
@@ -685,4 +685,214 @@
 .dt-webform-tooltip:hover::before {
     opacity: 1;
     visibility: visible;
+}
+
+/* Embed Code Section */
+.dt-webform-embed-section {
+    margin-top: 30px;
+    padding: 25px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+}
+
+.dt-webform-embed-section h3 {
+    margin: 0 0 10px 0;
+    color: #1d2327;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.dt-webform-embed-section > .description {
+    margin: 0 0 20px 0;
+    color: #646970;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.dt-webform-embed-options {
+    display: grid;
+    gap: 25px;
+}
+
+.dt-webform-embed-option {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.dt-webform-embed-option h4 {
+    margin: 0 0 8px 0;
+    color: #1d2327;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dt-webform-embed-option h4::before {
+    content: '';
+    width: 4px;
+    height: 20px;
+    background: #2271b1;
+    border-radius: 2px;
+}
+
+.dt-webform-embed-option .description {
+    margin: 0 0 15px 0;
+    color: #646970;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.dt-webform-code-container {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.dt-webform-code-textarea {
+    flex: 1;
+    min-height: 80px;
+    padding: 12px;
+    border: 1px solid #8c8f94;
+    border-radius: 4px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    background: #f9f9f9;
+    resize: vertical;
+    color: #1d2327;
+}
+
+.dt-webform-code-textarea:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+    outline: none;
+    background: #fff;
+}
+
+.dt-webform-url-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #8c8f94;
+    border-radius: 4px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    background: #f9f9f9;
+    color: #1d2327;
+}
+
+.dt-webform-url-input:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+    outline: none;
+    background: #fff;
+}
+
+.dt-webform-copy-btn {
+    flex-shrink: 0;
+    background: #2271b1;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.dt-webform-copy-btn:hover:not(:disabled) {
+    background: #135e96;
+    transform: translateY(-1px);
+}
+
+.dt-webform-copy-btn.copied {
+    background: #198754;
+}
+
+.dt-webform-copy-btn:active {
+    transform: translateY(0);
+}
+
+.dt-webform-embed-customizer {
+    margin-top: 15px;
+}
+
+.dt-webform-embed-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding: 15px;
+    background: #f6f7f7;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    flex-wrap: wrap;
+}
+
+.dt-webform-embed-controls label {
+    font-weight: 500;
+    color: #1d2327;
+    font-size: 13px;
+}
+
+.dt-webform-embed-controls input {
+    padding: 6px 8px;
+    border: 1px solid #8c8f94;
+    border-radius: 3px;
+    font-size: 12px;
+    width: 80px;
+}
+
+.dt-webform-embed-controls input:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+    outline: none;
+}
+
+.dt-webform-embed-controls button {
+    background: #50575e;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 3px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.dt-webform-embed-controls button:hover {
+    background: #3c434a;
+}
+
+/* Responsive adjustments for embed section */
+@media (max-width: 768px) {
+    .dt-webform-embed-section {
+        padding: 20px;
+        margin-top: 20px;
+    }
+    
+    .dt-webform-code-container {
+        flex-direction: column;
+    }
+    
+    .dt-webform-copy-btn {
+        align-self: flex-start;
+    }
+    
+    .dt-webform-embed-controls {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .dt-webform-embed-controls input {
+        width: 120px;
+    }
 }

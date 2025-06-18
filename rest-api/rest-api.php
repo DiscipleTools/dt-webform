@@ -3,6 +3,7 @@ if ( !defined( 'ABSPATH' ) ) { exit; } // Exit if accessed directly.
 
 // Include the REST API controllers
 require_once plugin_dir_path( __FILE__ ) . 'class-forms-controller.php';
+require_once plugin_dir_path( __FILE__ ) . 'class-submissions-controller.php';
 
 class Disciple_Tools_Webform_Endpoints
 {
@@ -24,7 +25,8 @@ class Disciple_Tools_Webform_Endpoints
      */
     public function add_api_routes() {
         // Initialize controllers - they register their own routes
-        // Controllers are initialized in their respective files
+        new DT_Webform_Forms_Controller();
+        new DT_Webform_Submissions_Controller();
         
         // Legacy endpoint for testing
         $namespace = 'dt-webform/v1';

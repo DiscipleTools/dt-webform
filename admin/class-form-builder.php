@@ -45,18 +45,35 @@ class DT_Webform_Form_Builder {
             '1.0.0'
         );
 
+        // Get initial DT fields data if we're editing an existing form
+        $current_post_type = '';
+        $initial_dt_fields = [];
+        
+        if ( isset( $_GET['form_id'] ) && ! empty( $_GET['form_id'] ) ) {
+            $form_id = intval( $_GET['form_id'] );
+            $form_data = DT_Webform_Core::get_form( $form_id );
+            if ( $form_data && ! empty( $form_data['post_type'] ) ) {
+                $current_post_type = $form_data['post_type'];
+                $initial_dt_fields = $this->get_dt_fields( $current_post_type );
+            }
+        }
+
         // Localize script with data
         wp_localize_script( 'dt-webform-form-builder', 'dtWebformAdmin', [
             'ajaxurl' => admin_url( 'admin-ajax.php' ),
+            'restUrl' => rest_url(),
+            'restNonce' => wp_create_nonce( 'wp_rest' ),
             'nonce' => wp_create_nonce( 'dt_webform_builder' ),
+            'siteUrl' => home_url(),
+            'initialPostType' => $current_post_type,
+            'initialDTFields' => $initial_dt_fields,
             'strings' => [
-                'confirm_delete' => __( 'Are you sure you want to delete this field?', 'dt-webform' ),
-                'required_field' => __( 'This field is required', 'dt-webform' ),
-                'add_option' => __( 'Add Option', 'dt-webform' ),
-                'remove_option' => __( 'Remove', 'dt-webform' ),
-                'field_settings' => __( 'Field Settings', 'dt-webform' ),
-                'preview_form' => __( 'Preview Form', 'dt-webform' ),
-                'loading' => __( 'Loading...', 'dt-webform' ),
+                'confirmDelete' => __( 'Are you sure you want to delete this field?', 'dt-webform' ),
+                'fieldRequired' => __( 'This field is required.', 'dt-webform' ),
+                'saveSuccess' => __( 'Form saved successfully!', 'dt-webform' ),
+                'saveError' => __( 'Failed to save form.', 'dt-webform' ),
+                'loadingFields' => __( 'Loading fields...', 'dt-webform' ),
+                'noFieldsFound' => __( 'No fields found for this post type.', 'dt-webform' ),
             ],
         ] );
     }
@@ -325,9 +342,8 @@ class DT_Webform_Form_Builder {
                 <h2><?php echo $form_id ? __( 'Edit Form', 'dt-webform' ) : __( 'Create New Form', 'dt-webform' ); ?></h2>
             </div>
 
-            <form id="dt-webform-builder-form" method="post">
-                <?php wp_nonce_field( 'dt_webform_builder', 'dt_webform_builder_nonce' ); ?>
-                <input type="hidden" name="action" value="<?php echo $form_id ? 'update_form' : 'create_form'; ?>">
+            <div id="dt-webform-builder-form" class="dt-webform-form-container">
+                <!-- Hidden fields for form data -->
                 <?php if ( $form_id ) : ?>
                     <input type="hidden" name="form_id" value="<?php echo esc_attr( $form_id ); ?>">
                 <?php endif; ?>
@@ -457,14 +473,75 @@ class DT_Webform_Form_Builder {
                             </button>
                         </div>
                         <div class="dt-webform-actions-right">
-                            <input type="submit" class="button-primary" value="<?php echo $form_id ? esc_attr__( 'Update Form', 'dt-webform' ) : esc_attr__( 'Create Form', 'dt-webform' ); ?>">
+                            <button type="button" class="button-primary" id="dt-webform-save-btn">
+                                <?php echo $form_id ? esc_html__( 'Update Form', 'dt-webform' ) : esc_html__( 'Create Form', 'dt-webform' ); ?>
+                            </button>
                             <a href="<?php echo esc_url( admin_url( 'admin.php?page=disciple_tools_webform&tab=forms' ) ); ?>" class="button">
                                 <?php esc_html_e( 'Cancel', 'dt-webform' ); ?>
                             </a>
                         </div>
                     </div>
+
+                    <!-- Embed Code Section (shown after form is saved) -->
+                    <?php if ( $form_id ) : ?>
+                        <div class="dt-webform-embed-section">
+                            <h3><?php esc_html_e( 'Embed This Form', 'dt-webform' ); ?></h3>
+                            <p class="description"><?php esc_html_e( 'Use the code below to embed this form on your website or share the direct link.', 'dt-webform' ); ?></p>
+                            
+                            <div class="dt-webform-embed-options">
+                                <div class="dt-webform-embed-option">
+                                    <h4><?php esc_html_e( 'Embed Code (iframe)', 'dt-webform' ); ?></h4>
+                                    <p class="description"><?php esc_html_e( 'Copy and paste this code into your website HTML to embed the form.', 'dt-webform' ); ?></p>
+                                    <div class="dt-webform-code-container">
+                                        <textarea id="dt-webform-embed-code" class="dt-webform-code-textarea" readonly><?php echo esc_textarea( $this->get_form_embed_code( $form_id ) ); ?></textarea>
+                                        <button type="button" class="button dt-webform-copy-btn" data-target="dt-webform-embed-code">
+                                            <?php esc_html_e( 'Copy Code', 'dt-webform' ); ?>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="dt-webform-embed-option">
+                                    <h4><?php esc_html_e( 'Direct Link', 'dt-webform' ); ?></h4>
+                                    <p class="description"><?php esc_html_e( 'Share this link directly or use it in your own iframe.', 'dt-webform' ); ?></p>
+                                    <div class="dt-webform-code-container">
+                                        <input type="text" id="dt-webform-direct-url" class="dt-webform-url-input" value="<?php echo esc_url( $this->get_form_url( $form_id ) ); ?>" readonly>
+                                        <button type="button" class="button dt-webform-copy-btn" data-target="dt-webform-direct-url">
+                                            <?php esc_html_e( 'Copy URL', 'dt-webform' ); ?>
+                                        </button>
+                                        <a href="<?php echo esc_url( $this->get_form_url( $form_id ) ); ?>" target="_blank" class="button">
+                                            <?php esc_html_e( 'Preview', 'dt-webform' ); ?>
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div class="dt-webform-embed-option">
+                                    <h4><?php esc_html_e( 'Customizable Embed Code', 'dt-webform' ); ?></h4>
+                                    <p class="description"><?php esc_html_e( 'Customize the iframe dimensions and generate new embed code.', 'dt-webform' ); ?></p>
+                                    <div class="dt-webform-embed-customizer">
+                                        <div class="dt-webform-embed-controls">
+                                            <label for="embed-width"><?php esc_html_e( 'Width:', 'dt-webform' ); ?></label>
+                                            <input type="text" id="embed-width" value="100%" class="small-text">
+                                            
+                                            <label for="embed-height"><?php esc_html_e( 'Height:', 'dt-webform' ); ?></label>
+                                            <input type="text" id="embed-height" value="600px" class="small-text">
+                                            
+                                            <button type="button" class="button" id="generate-custom-embed">
+                                                <?php esc_html_e( 'Generate', 'dt-webform' ); ?>
+                                            </button>
+                                        </div>
+                                        <div class="dt-webform-code-container">
+                                            <textarea id="dt-webform-custom-embed" class="dt-webform-code-textarea" readonly placeholder="<?php esc_attr_e( 'Click Generate to create custom embed code', 'dt-webform' ); ?>"></textarea>
+                                            <button type="button" class="button dt-webform-copy-btn" data-target="dt-webform-custom-embed" style="display: none;">
+                                                <?php esc_html_e( 'Copy Code', 'dt-webform' ); ?>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
                 </div>
-            </form>
+            </div>
 
             <!-- Field Editor Modal -->
             <div id="dt-webform-field-editor-modal" class="dt-webform-modal" style="display: none;">
@@ -749,6 +826,36 @@ class DT_Webform_Form_Builder {
         }
 
         return $errors;
+    }
+
+    /**
+     * Get form URL for embedding/sharing
+     *
+     * @param int $form_id Form ID
+     * @return string Form URL
+     */
+    private function get_form_url( $form_id ) {
+        return home_url( "/webform/{$form_id}" );
+    }
+
+    /**
+     * Get form embed code
+     *
+     * @param int $form_id Form ID
+     * @param array $options Embed options
+     * @return string Embed code
+     */
+    private function get_form_embed_code( $form_id, $options = [] ) {
+        $form_url = $this->get_form_url( $form_id );
+        $width = $options['width'] ?? '100%';
+        $height = $options['height'] ?? '600px';
+
+        return sprintf(
+            '<iframe src="%s" width="%s" height="%s" frameborder="0" scrolling="auto"></iframe>',
+            esc_url( $form_url ),
+            esc_attr( $width ),
+            esc_attr( $height )
+        );
     }
 }
 

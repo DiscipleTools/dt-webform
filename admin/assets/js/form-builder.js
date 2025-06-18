@@ -20,8 +20,8 @@
     function initFormBuilder() {
         if (formBuilder.initialized) return;
 
-        formBuilder.form = $('#dt-webform-builder-form');
-        if (!formBuilder.form.length) return;
+        // Check if form builder exists
+        if (!$('#dt-webform-builder').length) return;
 
         // Initialize sortable for form fields
         initSortable();
@@ -38,8 +38,13 @@
         // Load custom field types
         loadCustomFieldTypes();
 
+        // Load initial DT fields if we have them
+        if (dtWebformAdmin.initialPostType && dtWebformAdmin.initialDTFields) {
+            formBuilder.dtFields = dtWebformAdmin.initialDTFields;
+            renderDTFields(dtWebformAdmin.initialDTFields);
+        }
+
         formBuilder.initialized = true;
-        console.log('DT Webform Builder initialized');
     }
 
     // Initialize sortable functionality
@@ -62,7 +67,7 @@
 
     // Initialize drag and drop from sidebar
     function initDragDrop() {
-        // Make field items draggable
+        // Make existing field items draggable (for initial page load)
         $('.dt-webform-field-item').draggable({
             helper: function() {
                 return $('<div class="dt-webform-drag-helper">' + 
@@ -144,13 +149,16 @@
             closeModal();
         });
 
-        // Form submission
-        formBuilder.form.on('submit', function(e) {
+        // Save button click
+        $(document).on('click', '#dt-webform-save-btn', function(e) {
+            e.preventDefault();
+            
             if (!validateForm()) {
-                e.preventDefault();
                 return false;
             }
-            serializeFormData();
+            
+            // Use REST API to create/update form
+            submitFormViaAPI();
         });
 
         // Prevent modal content clicks from closing modal
@@ -185,10 +193,6 @@
 
     // Load DT fields for selected post type
     function loadDTFields(postType) {
-        console.log('Loading DT fields for post type:', postType);
-        console.log('AJAX URL:', dtWebformAdmin.ajaxurl);
-        console.log('Nonce:', dtWebformAdmin.nonce);
-        
         const $container = $('#dt-available-fields');
         $container.addClass('dt-webform-loading');
 
@@ -197,17 +201,13 @@
             post_type: postType,
             nonce: dtWebformAdmin.nonce
         }, function(response) {
-            console.log('AJAX response:', response);
             if (response.success) {
                 formBuilder.dtFields = response.data;
                 renderDTFields(response.data);
             } else {
-                console.error('Failed to load DT fields:', response.data);
                 showError('Failed to load DT fields: ' + (response.data || 'Unknown error'));
             }
         }).fail(function(xhr, status, error) {
-            console.error('AJAX request failed:', status, error);
-            console.error('Response text:', xhr.responseText);
             showError('Failed to load DT fields: ' + error);
         }).always(function() {
             $container.removeClass('dt-webform-loading');
@@ -240,6 +240,7 @@
                 '<span class="field-type">' + field.type + '</span>' +
                 '</div>');
             
+            // Make field draggable
             $fieldItem.draggable({
                 helper: function() {
                     return $('<div class="dt-webform-drag-helper">' + field.label + '</div>');
@@ -261,12 +262,20 @@
 
         if (fieldType === 'dt') {
             fieldData = formBuilder.dtFields[fieldKey];
+            if (!fieldData) {
+                showError('Field data not found for: ' + fieldKey + '. Please select the post type again.');
+                return;
+            }
         } else if (fieldType === 'custom') {
             fieldData = getCustomFieldData(fieldKey);
+            if (!fieldData) {
+                showError('Custom field data not found for: ' + fieldKey);
+                return;
+            }
         }
 
         if (!fieldData) {
-            console.error('Field data not found for:', fieldKey);
+            showError('Field data not found for: ' + fieldKey);
             return;
         }
 
@@ -601,6 +610,70 @@
         });
     }
 
+    // Submit form via REST API
+    function submitFormViaAPI() {
+        const formData = {
+            title: $('#form_title').val().trim(),
+            post_type: $('#form_post_type').val(),
+            is_active: $('#form_is_active').is(':checked'),
+            fields: formBuilder.fields,
+            settings: {
+                title: $('#form_title').val().trim(),
+                description: $('#form_description').val().trim(),
+                success_message: $('#form_success_message').val().trim()
+            }
+        };
+
+        // Determine if creating or updating
+        const formId = $('input[name="form_id"]').val();
+        const isUpdate = formId && formId !== '';
+        
+        // Show loading state
+        const $submitBtn = $('#dt-webform-save-btn');
+        const originalText = $submitBtn.text();
+        $submitBtn.prop('disabled', true).text(isUpdate ? 'Updating...' : 'Creating...');
+
+        const url = isUpdate ? 
+            dtWebformAdmin.restUrl + 'dt-webform/v1/forms/' + formId :
+            dtWebformAdmin.restUrl + 'dt-webform/v1/forms';
+        
+        const method = isUpdate ? 'PUT' : 'POST';
+
+        $.ajax({
+            url: url,
+            method: method,
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', dtWebformAdmin.restNonce);
+            },
+            success: function(response) {
+                if (isUpdate) {
+                    showSuccess('Form updated successfully!');
+                } else {
+                    showSuccess('Form created successfully!');
+                    // Redirect to edit page for new forms
+                    setTimeout(function() {
+                        window.location.href = 'admin.php?page=disciple_tools_webform&tab=forms&action=edit&form_id=' + response.id;
+                    }, 1500);
+                }
+            },
+            error: function(xhr, status, error) {
+                let errorMessage = 'Failed to save form';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (error) {
+                    errorMessage += ': ' + error;
+                }
+                showError(errorMessage);
+            },
+            complete: function() {
+                // Restore button state
+                $submitBtn.prop('disabled', false).text(originalText);
+            }
+        });
+    }
+
     // Validate form
     function validateForm() {
         let isValid = true;
@@ -629,14 +702,6 @@
         return isValid;
     }
 
-    // Serialize form data
-    function serializeFormData() {
-        // Add fields data to form
-        const fieldsInput = $('<input type="hidden" name="fields" />');
-        fieldsInput.val(JSON.stringify(formBuilder.fields));
-        formBuilder.form.append(fieldsInput);
-    }
-
     // Close modal
     function closeModal() {
         $('.dt-webform-modal').hide();
@@ -645,6 +710,11 @@
 
     // Show error message
     function showError(message) {
+        alert(message); // Simple alert for now, can be enhanced with better UI
+    }
+
+    // Show success message
+    function showSuccess(message) {
         alert(message); // Simple alert for now, can be enhanced with better UI
     }
 
@@ -666,9 +736,65 @@
         $(this).closest('.option-row').remove();
     });
 
+    // Embed code functionality
+    function initEmbedCodeHandlers() {
+        // Copy to clipboard functionality
+        $(document).on('click', '.dt-webform-copy-btn', function(e) {
+            e.preventDefault();
+            const targetId = $(this).data('target');
+            const $target = $('#' + targetId);
+            
+            if ($target.length) {
+                $target.select();
+                $target[0].setSelectionRange(0, 99999); // For mobile devices
+                
+                try {
+                    document.execCommand('copy');
+                    $(this).text('Copied!').addClass('copied');
+                    
+                    // Reset button text after 2 seconds
+                    setTimeout(() => {
+                        $(this).text($(this).hasClass('dt-webform-copy-btn') ? 
+                            (targetId.includes('url') ? 'Copy URL' : 'Copy Code') : 'Copy')
+                            .removeClass('copied');
+                    }, 2000);
+                } catch (err) {
+                    console.error('Failed to copy text: ', err);
+                    alert('Failed to copy to clipboard. Please select and copy manually.');
+                }
+            }
+        });
+
+        // Generate custom embed code
+        $(document).on('click', '#generate-custom-embed', function(e) {
+            e.preventDefault();
+            
+            const width = $('#embed-width').val().trim() || '100%';
+            const height = $('#embed-height').val().trim() || '600px';
+            const formId = $('input[name="form_id"]').val();
+            
+            if (!formId) {
+                alert('Form ID not found. Please save the form first.');
+                return;
+            }
+            
+            const formUrl = dtWebformAdmin.siteUrl + '/webform/' + formId;
+            const customEmbedCode = '<iframe src="' + formUrl + '" width="' + width + '" height="' + height + '" frameborder="0" scrolling="auto"></iframe>';
+            
+            $('#dt-webform-custom-embed').val(customEmbedCode);
+            $('.dt-webform-copy-btn[data-target="dt-webform-custom-embed"]').show();
+        });
+
+        // Auto-select text when clicking on readonly inputs/textareas
+        $(document).on('click', '.dt-webform-code-textarea, .dt-webform-url-input', function() {
+            $(this).select();
+        });
+    }
+
     // Initialize when document is ready
     $(document).ready(function() {
         initFormBuilder();
+        initEmbedCodeHandlers();
     });
 
 })(jQuery);
