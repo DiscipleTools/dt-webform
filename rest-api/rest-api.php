@@ -1,63 +1,53 @@
 <?php
 if ( !defined( 'ABSPATH' ) ) { exit; } // Exit if accessed directly.
 
+// Include the REST API controllers
+require_once plugin_dir_path( __FILE__ ) . 'class-forms-controller.php';
+
 class Disciple_Tools_Webform_Endpoints
 {
-    /**
-     * @todo Set the permissions your endpoint needs
-     * @link https://github.com/DiscipleTools/Documentation/blob/master/theme-core/capabilities.md
-     * @var string[]
-     */
-    public $permissions = [ 'access_contacts', 'dt_all_access_contacts', 'view_project_metrics' ];
-
-
-    /**
-     * @todo define the name of the $namespace
-     * @todo define the name of the rest route
-     * @todo defne method (CREATABLE, READABLE)
-     * @todo apply permission strategy. '__return_true' essentially skips the permission check.
-     */
-    //See https://github.com/DiscipleTools/disciple-tools-theme/wiki/Site-to-Site-Link for outside of wordpress authentication
-    public function add_api_routes() {
-        $namespace = 'dt-webform/v1';
-
-        register_rest_route(
-            $namespace, '/endpoint', [
-                'methods'  => 'GET',
-                'callback' => [ $this, 'endpoint' ],
-                'permission_callback' => function( WP_REST_Request $request ) {
-                    return $this->has_permission();
-                },
-            ]
-        );
-    }
-
-
-    public function endpoint( WP_REST_Request $request ) {
-
-        // @todo run your function here
-
-        return true;
-    }
-
     private static $_instance = null;
+    
     public static function instance() {
         if ( is_null( self::$_instance ) ) {
             self::$_instance = new self();
         }
         return self::$_instance;
-    } // End instance()
+    }
+    
     public function __construct() {
         add_action( 'rest_api_init', [ $this, 'add_api_routes' ] );
     }
-    public function has_permission(){
-        $pass = false;
-        foreach ( $this->permissions as $permission ){
-            if ( current_user_can( $permission ) ){
-                $pass = true;
-            }
-        }
-        return $pass;
+
+    /**
+     * Register all API routes for the webform plugin
+     */
+    public function add_api_routes() {
+        // Initialize controllers - they register their own routes
+        // Controllers are initialized in their respective files
+        
+        // Legacy endpoint for testing
+        $namespace = 'dt-webform/v1';
+        register_rest_route(
+            $namespace, '/test', [
+                'methods'  => 'GET',
+                'callback' => [ $this, 'test_endpoint' ],
+                'permission_callback' => '__return_true',
+            ]
+        );
+    }
+
+    /**
+     * Test endpoint to verify API is working
+     */
+    public function test_endpoint( WP_REST_Request $request ) {
+        return new WP_REST_Response( [
+            'success' => true,
+            'message' => 'DT Webform API is working',
+            'version' => '1.0',
+            'timestamp' => current_time( 'mysql' ),
+        ], 200 );
     }
 }
+
 Disciple_Tools_Webform_Endpoints::instance();

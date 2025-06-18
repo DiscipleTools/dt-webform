@@ -114,11 +114,16 @@ class Disciple_Tools_Webform {
 
 
         /**
-         * @todo Decide if you want to add a custom admin page in the admin area
-         * To remove: delete the 3 lines below and remove the folder named /admin
+         * Load core functionality
+         */
+        require_once( 'includes/class-dt-webform-core.php' ); // Core webform functionality
+        
+        /**
+         * Load admin functionality
          */
         if ( is_admin() ) {
-            require_once( 'admin/admin-menu-and-tabs.php' ); // adds starter admin page and section for plugin
+            require_once( 'admin/class-form-manager.php' ); // Form manager for admin operations
+            require_once( 'admin/admin-menu-and-tabs.php' ); // Admin interface
         }
 
         /**
@@ -160,7 +165,28 @@ class Disciple_Tools_Webform {
      * @return void
      */
     public static function activation() {
-        // add elements here that need to fire on activation
+        // Ensure core is loaded for activation
+        if ( ! class_exists( 'DT_Webform_Core' ) ) {
+            require_once( 'includes/class-dt-webform-core.php' );
+        }
+        
+        // Force capability registration on activation
+        $core = DT_Webform_Core::instance();
+        $core->register_capabilities();
+        
+        // Flush rewrite rules to ensure custom post type URLs work
+        flush_rewrite_rules();
+        
+        // Set plugin version
+        update_option( 'dt_webform_version', '0.1' );
+        
+        // Set default options
+        if ( ! get_option( 'dt_webform_default_success_message' ) ) {
+            update_option( 'dt_webform_default_success_message', __( 'Thank you for your submission!', 'dt-webform' ) );
+        }
+        if ( ! get_option( 'dt_webform_cache_duration' ) ) {
+            update_option( 'dt_webform_cache_duration', 3600 ); // 1 hour default
+        }
     }
 
     /**
@@ -171,8 +197,14 @@ class Disciple_Tools_Webform {
      * @return void
      */
     public static function deactivation() {
-        // add functions here that need to happen on deactivation
+        // Flush rewrite rules
+        flush_rewrite_rules();
+        
+        // Remove transients
         delete_option( 'dismissed-dt-webform' );
+        
+        // Note: We don't remove user data (forms, options) on deactivation
+        // Only on uninstall should data be removed
     }
 
     /**
